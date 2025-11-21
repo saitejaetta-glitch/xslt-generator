@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>XSLT File Transformer</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 2rem auto; }
+    h1 { font-size: 1.5rem; }
+    label { display: block; margin-top: 1rem; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; }
+    pre { background: #f5f5f5; padding: 1rem; white-space: pre-wrap; border: 1px solid #ddd; }
+    .dropzone {
+      border: 2px dashed #aaa;
+      padding: 1rem;
+      margin-top: 1rem;
+      background: #f9f9f9;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>XSLT File Transformer</h1>
+
+  <form id="xsltForm">
+    <label>Drop XML and XSLT files below or use buttons:</label>
+
+    <div class="dropzone" id="dropzone">Drag & drop XML and XSLT files here</div>
+
+    <label for="xml">XML File:</label>
+    <input type="file" id="xml" name="xml" accept=".xml" required />
+
+    <label for="xslt">XSLT File:</label>
+    <input type="file" id="xslt" name="xslt" accept=".xsl,.xslt,.xml" required />
+
+    <label for="outputFormat">Output Format:</label>
+    <select id="outputFormat" name="outputFormat">
+      <option value="xml">XML</option>
+      <option value="html">HTML</option>
+      <option value="text">Plain Text</option>
+    </select>
+
+    <button type="submit">Transform</button>
+  </form>
+
+  <h2>Result:</h2>
+  <pre id="result">Nothing yet.</pre>
+  <button id="downloadBtn" style="display:none;">Download Result</button>
+
+  <script>
+    const form = document.getElementById('xsltForm');
+    const result = document.getElementById('result');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const dropzone = document.getElementById('dropzone');
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.style.background = '#e0e0e0';
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.style.background = '#f9f9f9';
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.style.background = '#f9f9f9';
+
+      const files = e.dataTransfer.files;
+      for (const file of files) {
+        if (file.name.endsWith('.xml')) {
+          document.getElementById('xml').files = new DataTransfer().items.add(file).getAsFileList();
+        } else if (file.name.endsWith('.xsl') || file.name.endsWith('.xslt')) {
+          document.getElementById('xslt').files = new DataTransfer().items.add(file).getAsFileList();
+        }
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData();
+      const xmlFile = document.getElementById('xml').files[0];
+      const xsltFile = document.getElementById('xslt').files[0];
+      const format = document.getElementById('outputFormat').value;
+
+      if (!xmlFile || !xsltFile) {
+        result.textContent = 'Please upload both XML and XSLT files.';
+        return;
+      }
+
+      formData.append('xml', xmlFile);
+      formData.append('xslt', xsltFile);
+      formData.append('outputFormat', format);
+
+      try {
+        const response = await fetch('https://your-api-url.onrender.com/transform', {
+          method: 'POST',
+          body: formData
+        });
+
+        const text = await response.text();
+        result.textContent = text;
+
+        // Allow download
+        downloadBtn.style.display = 'inline-block';
+        downloadBtn.onclick = () => {
+          const blob = new Blob([text], { type: 'text/plain' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'transformed.' + format;
+          a.click();
+        };
+      } catch (err) {
+        result.textContent = 'Error: ' + err;
+      }
+    });
+  </script>
+</body>
+</html>
